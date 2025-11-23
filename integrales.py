@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Callable
 
-def integral_de_linea(F_np: Callable, r: Callable, dr_dt: Callable,
+def calcular_trabajo(F_np: Callable, r: Callable, dr_dt: Callable,
                       t0: float = 0.0, t1: float = 1.0, n: int = 2000) -> float:
     """
     Calcula W = ∫ F(r(t)) · r'(t) dt por regla del trapecio.
@@ -36,7 +36,7 @@ def integral_de_linea(F_np: Callable, r: Callable, dr_dt: Callable,
 
 # ---- Trayectorias estándar ----
 
-def r_recta(A, B):
+def trayectoria_recta(A, B):
     """
     Retorna una función r(t) para la recta entre los puntos A y B.
 
@@ -58,7 +58,7 @@ def r_recta(A, B):
                                 A[1] + (B[1] - A[1]) * t))
     return r
 
-def dr_recta_dt(A, B):
+def velocidad_recta(A, B):
     """
     Retorna una función dr/dt constante para una recta de A a B.
 
@@ -80,91 +80,99 @@ def dr_recta_dt(A, B):
         return np.column_stack((np.full_like(t, vx), np.full_like(t, vy)))
     return dr
 
-def r_parabola(A, B):
+def trayectoria_parabolica(A, B):
     """
-    Retorna una función r(t) para una parábola canónica de (0,0) a (1,1).
-
-    Parámetros
-    ----------
-    A : iterable de float
-        Ignorado: la función asume A=(0,0).
-    B : iterable de float
-        Ignorado: la función asume B=(1,1).
-
-    Retorna
-    -------
-    function
-        Función r(t) = (t, t**2).
+    Trayectoria curva que une A y B.
+    x(t) cambia linealmente de Ax a Bx,
+    y(t) cambia de Ay a By con forma parabólica.
     """
-    # Para simplicidad del proyecto fijamos A=(0,0), B=(1,1); si no, usar r_familia con 'a'.
+    Ax, Ay = A
+    Bx, By = B
+
     def r(t):
         t = np.asarray(t)
-        return np.column_stack((t, t**2))
+        x = Ax + (Bx - Ax) * t          # interpolación lineal en x
+        y = Ay + (By - Ay) * (t**2)     # parábola reescalada en y
+        return np.column_stack((x, y))
     return r
 
-def dr_parabola_dt(A, B):
+def velocidad_parabolica(A, B):
     """
-    Retorna una función dr/dt para la parábola canónica (t, t**2).
+    Calcula la derivada (velocidad) para una trayectoria parabólica entre A y B.
 
     Parámetros
     ----------
     A : iterable de float
-        Ignorado.
+        Punto inicial (x, y).
     B : iterable de float
-        Ignorado.
+        Punto final (x, y).
 
     Retorna
     -------
     function
-        Función dr/dt = (1, 2t).
+        Función dr/dt para la trayectoria parabólica.
     """
+    Ax, Ay = A  # Extraer coordenadas iniciales
+    Bx, By = B  # Extraer coordenadas finales
+
     def dr(t):
+        # Convertimos t a un array de NumPy
         t = np.asarray(t)
-        return np.column_stack((np.ones_like(t), 2 * t))
+        # La derivada de x(t) respecto a t es constante (Bx - Ax)
+        dx = np.full_like(t, Bx - Ax)   # dx/dt de x(t) = Ax + (Bx-Ax)t
+        # La derivada de y(t) respecto a t es 2*(By-Ay)*t (de y(t) = Ay + (By-Ay)t^2)
+        dy = (By - Ay) * 2 * t          # dy/dt de y(t) = Ay + (By-Ay)t^2
+        # Combinamos las derivadas en un arreglo columna
+        return np.column_stack((dx, dy))
     return dr
 
-def r_familia(A, B, a: float):
+def trayectoria_parametrica(A, B, a: float):
     """
-    Retorna una función r(t) para una familia cuadrática con parámetro 'a' de (0,0) a (1,1).
-
-    Parámetros
-    ----------
-    A : iterable de float
-        Ignorado: función asume A=(0,0).
-    B : iterable de float
-        Ignorado: función asume B=(1,1).
-    a : float
-        Parámetro de la familia cuadrática.
-
-    Retorna
-    -------
-    function
-        Función r(t) = (t, (1-a)t + a t**2).
+    Familia de trayectorias entre A y B.
+    x(t) lineal, y(t) = Ay + (By-Ay)*[(1-a)t + a t^2]
     """
+    # Extrae las coordenadas iniciales y finales de los puntos A y B
+    Ax, Ay = A
+    Bx, By = B
+
     def r(t):
+        # Convierte t en un array de NumPy, por si es escalar o vector
         t = np.asarray(t)
-        return np.column_stack((t, (1 - a) * t + a * (t ** 2)))
+        # x(t) varía linealmente entre Ax y Bx
+        x = Ax + (Bx - Ax) * t
+        # Calcula la base cuadrática para y(t)
+        base = (1 - a) * t + a * (t ** 2)
+        # y(t) es una combinación lineal y cuadrática entre Ay y By
+        y = Ay + (By - Ay) * base
+        # Combina x e y en un arreglo de dos columnas (x, y)
+        return np.column_stack((x, y))
     return r
 
-def dr_familia_dt(A, B, a: float):
-    """
-    Retorna función dr/dt para la familia cuadrática con 'a'.
 
-    Parámetros
-    ----------
-    A : iterable de float
-        Ignorado.
-    B : iterable de float
-        Ignorado.
-    a : float
-        Parámetro de la familia cuadrática.
+def velocidad_parametrica(A, B, a: float):
+    """Calcula la derivada (velocidad) de una trayectoria paramétrica cuadrática entre A y B.
 
-    Retorna
-    -------
-    function
-        Función dr/dt = (1, (1-a) + 2a t).
+    Args:
+        A (np.ndarray): Punto inicial (Ax, Ay)
+        B (np.ndarray): Punto final (Bx, By)
+        a (float): Parámetro cuadrático
+
+    Returns:
+        function: función dr(t) que devuelve la velocidad en cada t
     """
+    # Extrae las coordenadas iniciales y finales de los puntos A y B
+    Ax, Ay = A
+    Bx, By = B
+
     def dr(t):
+        # Convierte t en un array de NumPy, por si llega escalar o vector
         t = np.asarray(t)
-        return np.column_stack((np.ones_like(t), (1 - a) + 2 * a * t))
+        # Derivada de x(t) respecto a t: siempre es (Bx - Ax), constante
+        dx = np.full_like(t, Bx - Ax)
+        # Derivada de [(1-a)t + a t^2] respecto a t: (1-a) + 2a t
+        dbase_dt = (1 - a) + 2 * a * t
+        # Derivada total respecto a t de y(t)
+        dy = (By - Ay) * dbase_dt
+        # Combina las derivadas en un solo arreglo de dos columnas (dx, dy)
+        return np.column_stack((dx, dy))
     return dr

@@ -10,11 +10,12 @@ x, y = sp.symbols('x y', real=True)
 f1 = x ** 2 + y ** 2  # Potencial escalar para el campo conservativo
 F1_sym = (sp.diff(f1, x), sp.diff(f1, y))  # Gradiente del potencial: (2x, 2y)
 
-def F1_np(xy: np.ndarray) -> np.ndarray:
+def campo_conservativo(xy: np.ndarray) -> np.ndarray:
     """
     Versión numérica de F1.
     Calcula el campo F1 = (2x, 2y) dada una entrada de puntos xy.
     """
+    # Extrae las coordenadas x e y de cada punto
     X = xy[..., 0]
     Y = xy[..., 1]
     return np.stack((2 * X, 2 * Y), axis=-1)
@@ -22,10 +23,23 @@ def F1_np(xy: np.ndarray) -> np.ndarray:
 # Campo NO CONSERVATIVO F2 = (-y, x)
 F2_sym = (-y, x)  # Campo definido simbólicamente como una tupla (P, Q)
 
-def F2_np(xy: np.ndarray) -> np.ndarray:
+def campo_rotacional(xy: np.ndarray) -> np.ndarray:
     """
     Versión numérica de F2.
     Calcula el campo F2 = (-y, x) dada una entrada de puntos xy.
+
+    Parámetros
+    ----------
+    xy : np.ndarray
+        Un arreglo de N puntos en R^2. Es decir, un array de forma (N, 2) donde 
+        cada fila representa un punto (x, y). np.ndarray (abreviatura de "NumPy array") 
+        es una estructura de datos fundamental de la librería NumPy que permite 
+        almacenar y operar eficientemente sobre datos numéricos en arreglos multidimensionales.
+
+    Retorna
+    -------
+    np.ndarray
+        Un array de forma (N, 2) con los valores del campo F2 en cada punto.
     """
     X = xy[..., 0]
     Y = xy[..., 1]
@@ -56,14 +70,14 @@ FIELDS = {
     # Diccionario con información sobre cada campo vectorial
     "Conservativo: F1(x,y) = (2x, 2y)": {
         "sym": F1_sym,
-        "np": F1_np,
+        "np": campo_conservativo,
         "conservativo": True,
         "curl": CURL_F1,
         "potencial": potencial_f1,
     },
     "No conservativo: F2(x,y) = (-y, x)": {
         "sym": F2_sym,
-        "np": F2_np,
+        "np": campo_rotacional,
         "conservativo": False,
         "curl": CURL_F2,
         "potencial": None,

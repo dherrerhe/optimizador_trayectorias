@@ -2,8 +2,8 @@ import streamlit as st
 import numpy as np
 from campos import FIELDS
 from integrales import (
-    integral_de_linea, r_recta, dr_recta_dt,
-    r_parabola, dr_parabola_dt, r_familia, dr_familia_dt
+    calcular_trabajo, trayectoria_recta, velocidad_recta,
+    trayectoria_parabolica, velocidad_parabolica, trayectoria_parametrica, velocidad_parametrica
 )
 from visualizacion import quiver_2d, add_path, potencial_3d, plot_W_vs_a
 
@@ -31,7 +31,13 @@ res = st.sidebar.slider("Resolución integración (n)", 500, 6000, 2000, 100)
 dens = st.sidebar.slider("Densidad del campo (flechas)", 10, 30, 20, 1)
 
 st.sidebar.markdown("---")
-opt_scan = st.sidebar.checkbox("Explorar W(a) en la familia", value=False)
+explorar_optimo = False  # valor por defecto
+
+if (not campo["conservativo"]) and tray_sel.startswith("Familia"):
+    # Solo permitimos el barrido si NO es conservativo y estamos en la familia cuadrática
+    explorar_optimo = st.sidebar.checkbox("Explorar W(a) en la familia", value=False)
+else:
+    st.sidebar.caption("El barrido W(a) solo aplica para campos no conservativos y la familia cuadrática.")
 
 # --------- Información del campo ---------
 with st.expander("Detalles del campo"):
@@ -40,15 +46,15 @@ with st.expander("Detalles del campo"):
         st.write("Tiene potencial: f(x,y) = x² + y²")
 
 # --------- Construcción de trayectorias ---------
-r1, dr1 = r_recta(A, B), dr_recta_dt(A, B)
+r1, dr1 = trayectoria_recta(A, B), velocidad_recta(A, B)
 if tray_sel.startswith("Curva"):
-    r2, dr2 = r_parabola(A, B), dr_parabola_dt(A, B)
+    r2, dr2 = trayectoria_parabolica(A, B), velocidad_parabolica(A, B)
 else:
-    r2, dr2 = r_familia(A, B, a), dr_familia_dt(A, B, a)
+    r2, dr2 = trayectoria_parametrica(A, B, a), velocidad_parametrica(A, B, a)
 
 # --------- Cálculo de trabajos ---------
-W1 = integral_de_linea(F_np, r1, dr1, n=res)
-W2 = integral_de_linea(F_np, r2, dr2, n=res)
+W1 = calcular_trabajo(F_np, r1, dr1, n=res)
+W2 = calcular_trabajo(F_np, r2, dr2, n=res)
 
 col1, col2 = st.columns(2)
 with col1:
@@ -73,13 +79,14 @@ if campo["conservativo"] and campo["potencial"] is not None:
     st.plotly_chart(f3d, use_container_width=True)
 
 # --------- Exploración W(a) ---------
-if opt_scan and tray_sel.startswith("Familia"):
+if explorar_optimo and tray_sel.startswith("Familia"):
     st.subheader("Barrido del parámetro a")
     a_vals = np.linspace(-2.0, 2.0, 81)
     W_vals = []
     for av in a_vals:
-        rA, dA = r_familia(A, B, av), dr_familia_dt(A, B, av)
-        W_vals.append(integral_de_linea(F_np, rA, dA, n=res))
+        rA, dA = trayectoria_parametrica(A, B, av), velocidad_parametrica(A, B, av)
+        W_vals.append(calcular_trabajo(F_np, rA, dA, n=res))
+
     st.plotly_chart(plot_W_vs_a(a_vals, W_vals), use_container_width=True)
 
 st.info("Tip: en campos conservativos el trabajo depende solo de A y B; en no conservativos, depende de la forma del camino.")
