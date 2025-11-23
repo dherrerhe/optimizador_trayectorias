@@ -41,7 +41,23 @@ def add_path(fig, P, name="trayectoria"):
     Retorna:
         fig (plotly figure): la figura modificada.
     """
-    fig.add_trace(go.Scatter(x=P[:, 0], y=P[:, 1], mode="lines", name=name))
+    if "Recta" in name:
+        color = "orange"
+    elif "Trayectoria 2" in name or "Trayectoria" in name:
+        color = "red"
+    else:
+        # color por defecto si se usa otro nombre
+        color = "red"
+
+    fig.add_trace(
+        go.Scatter(
+            x=P[:, 0],
+            y=P[:, 1],
+            mode="lines",
+            name=name,
+            line=dict(color=color, width=3)
+        )
+    )
     return fig
 
 

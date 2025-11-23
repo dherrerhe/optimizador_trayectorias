@@ -67,6 +67,23 @@ fig = quiver_2d(F_np, density=dens)
 # Muestras para ploteo de caminos
 t_plot = np.linspace(0, 1, 500)
 P1 = r1(t_plot); P2 = r2(t_plot)
+
+x_min = min(P1[:, 0].min(), P2[:, 0].min())
+x_max = max(P1[:, 0].max(), P2[:, 0].max())
+y_min = min(P1[:, 1].min(), P2[:, 1].min())
+y_max = max(P1[:, 1].max(), P2[:, 1].max())
+
+# Un pequeño margen para que no queden pegados al borde
+dx = x_max - x_min
+dy = y_max - y_min
+pad_x = 0.2 * dx if dx > 0 else 1.0
+pad_y = 0.2 * dy if dy > 0 else 1.0
+
+xlim = (x_min - pad_x, x_max + pad_x)
+ylim = (y_min - pad_y, y_max + pad_y)
+
+# Ahora sí creamos la figura del campo usando esos límites
+fig = quiver_2d(F_np, xlim=xlim, ylim=ylim, density=dens)
 fig = add_path(fig, P1, "Recta A→B")
 fig = add_path(fig, P2, "Trayectoria 2")
 
