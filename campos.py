@@ -1,6 +1,56 @@
 import numpy as np
 import sympy as sp
 
+x, y = sp.symbols('x y', real=True)
+
+def crear_campo(nombre, P_expr, Q_expr):
+    """
+    Crea la entrada para FIELDS a partir de P(x,y) y Q(x,y) simbólicos.
+    Si el campo es conservativo (curl = 0), intenta hallar el potencial f(x,y).
+    """
+    F_sym = (P_expr, Q_expr)
+    curl = sp.simplify(curl_2d(F_sym))
+    es_conservativo = (curl == 0)
+
+    # Versión NumPy del campo
+    P_l = sp.lambdify((x, y), P_expr, "numpy")
+    Q_l = sp.lambdify((x, y), Q_expr, "numpy")
+
+    def F_np(xy: np.ndarray) -> np.ndarray:
+        X = xy[..., 0]
+        Y = xy[..., 1]
+        return np.stack((P_l(X, Y), Q_l(X, Y)), axis=-1)
+
+    potencial_fn = None
+
+    if es_conservativo:
+        # Paso 1: integrar P respecto a x
+        f_int_x = sp.integrate(P_expr, x)      # f(x,y) + C(y)
+
+        # Paso 2: derivar respecto a y
+        df_dy = sp.diff(f_int_x, y)
+
+        # Q(x,y) = df_dy + C'(y)  =>  C'(y) = Q - df_dy
+        resto = sp.simplify(Q_expr - df_dy)
+
+        # Si 'resto' depende solo de y, lo integramos en y
+        # (esto funciona bien para campos "lindos")
+        C_y = sp.integrate(resto, y)
+
+        f_pot = f_int_x + C_y      # potencial simbólico completo
+        f_pot_simpl = sp.simplify(f_pot)
+
+        # Versión NumPy del potencial
+        potencial_fn = sp.lambdify((x, y), f_pot_simpl, "numpy")
+
+    return nombre, {
+        "sym": F_sym,
+        "np": F_np,
+        "conservativo": es_conservativo,
+        "curl": curl,
+        "potencial": potencial_fn,
+    }
+
 # ----- Definiciones simbólicas -----
 
 # Definimos los símbolos simbólicos para las variables x e y
