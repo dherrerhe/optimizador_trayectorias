@@ -36,8 +36,8 @@ expr_Q = st.sidebar.text_input("Q(x,y) =", "-y")
 if st.sidebar.button("Añadir campo"):
     try:
         # Interpretación segura de las expresiones de P y Q usando sympy
-        P_expr = sp.sympify(expr_P, {"x": x, "y": y})
-        Q_expr = sp.sympify(expr_Q, {"x": x, "y": y})
+        P_expr = sp.sympify(expr_P, {"x": x, "y": y, "e": sp.E, "pi": sp.pi})
+        Q_expr = sp.sympify(expr_Q, {"x": x, "y": y, "e": sp.E, "pi": sp.pi})
 
         nombre_creado, campo_creado = crear_campo(
             f"{nombre_nuevo}: ({expr_P}, {expr_Q})",
