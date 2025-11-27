@@ -1,3 +1,4 @@
+# Requisitos principales del proyecto
 streamlit
 numpy
 sympy
