@@ -1,0 +1,119 @@
+// ===========================
+// VARIABLES DEL PROYECTO
+// ===========================
+
+
+// =========================
+// VARIABLES DE APP.PY
+// =========================
+
+// === 1. LIBRERÍAS Y SÍMBOLOS ===
+// st: objeto principal de streamlit (dashboard)
+// np: numpy (arrays, numérico)
+// sp: sympy (álgebra simbólica)
+// x, y: símbolos de sympy para variables espaciales
+
+// === 2. CAMPOS VECTORIALES ===
+// FIELDS: diccionario de campos vectoriales predefinidos/personalizados
+// crear_campo: función para crear un nuevo campo vectorial a partir de expresiones
+// campo_nombre: string, nombre del campo seleccionado por el usuario
+// campo: diccionario con la info del campo seleccionado
+// F_np: función numpy evaluable del campo seleccionado
+
+// === 3. DEFINICIÓN DE CAMPOS PERSONALIZADOS ===
+// nombre_nuevo: string para el nombre del campo personalizado a crear
+// expr_P, expr_Q: strings con las fórmulas para las componentes P, Q
+// P_expr, Q_expr: expresiones sympy de las componentes P, Q
+// nombre_creado: nombre final (string) del campo generado
+// campo_creado: diccionario del nuevo campo generado
+
+// === 4. PUNTOS Y TRAYECTORIAS ===
+// Ax, Ay: coordenadas del punto A (floats)
+// Bx, By: coordenadas del punto B (floats)
+// A, B: arrays numpy [x, y] de los puntos inicial y final
+
+// === 5. PARAMETRIZACIONES Y FUNCIONES DE TRAYECTORIAS ===
+// trayectoria_recta: función que genera la trayectoria recta de A a B
+// velocidad_recta: función que da la derivada de la trayectoria recta
+// trayectoria_parabolica: genera trayectoria curva tipo parábola
+// velocidad_parabolica: derivada asociada a la parabólica
+// trayectoria_parametrica: familia cuadrática entre A y B
+// velocidad_parametrica: derivada para la trayectoria cuadrática general
+// tray_sel: string, tipo de trayectoria seleccionada
+// a: valor del parámetro cuadrático a (de la familia)
+// r1, dr1: funciones de trayectoria 1 (recta) y su derivada
+// r2, dr2: funciones trayectoria 2 (parábola/familia) y su derivada
+
+// === 6. PARÁMETROS NUMÉRICOS Y CONTROLES ===
+// res: resolución numérica (# de puntos para integrar)
+// dens: densidad de flechas en el campo vectorial
+// search_min: bool, si se solicita buscar el parámetro óptimo a
+// explorar_optimo: bool, si se solicita visualización del barrido W(a)
+
+// === 7. CÁLCULO DE TRABAJOS ===
+// calcular_trabajo: función que calcula el trabajo sobre una trayectoria
+// W1: trabajo sobre trayectoria 1
+// W2: trabajo sobre trayectoria 2
+// a_vals: array de valores de a para barrido/óptimo
+// W_vals: lista/array con trabajo W para cada a
+// idx_min: índice del mínimo en W_vals
+// a_opt: valor de a que minimiza el trabajo
+// W_opt: trabajo mínimo asociado a a_opt
+
+// === 8. VISUALIZACIÓN Y GRÁFICOS ===
+// t_plot: array de t usado para graficar
+// P1, P2: arrays de Nx2 con posiciones de trayectorias 1 y 2
+// x_min, x_max, y_min, y_max: extremos globales de las trayectorias
+// dx, dy: diferenciales de rango en x/y para ajustar límites
+// pad_x, pad_y: márgenes visuales alrededor de trayectorias
+// xlim, ylim: tuplas con límites para los ejes x/y
+// quiver_2d: función para graficar el campo vectorial como flechas
+// add_path: agrega una trayectoria a una gráfica
+// potencial_3d: función para graficar el potencial escalar 3D
+// plot_W_vs_a: gráfica W vs a (barrido de trabajo)
+// fig: figura plotly (principal, campo + trayectorias)
+// P_opt: array de la trayectoria óptima correspondiente a a_opt
+// f3d: figura del potencial escalar 3D (si existe)
+
+// === 9. LAYOUT/INTERFAZ ===
+// col1, col2: columnas de métricas de Streamlit
+// col_opt1, col_opt2: columnas de opciones del sidebar
+
+
+// =========================
+// VARIABLES DE CAMPOS.PY
+// =========================
+// (No incluido en los contextos, pero se infiere que contiene:)
+// - FIELDS
+// - crear_campo
+// - x
+// - y
+
+// ==========================
+// VARIABLES DE INTEGRALES.PY
+// ==========================
+
+// Todas funciones, pero también se usan/buscan los siguientes parámetros/fórmulas:
+// A, B: puntos inicial y final (iterables de longitud 2, float)
+// a: parámetro para trayectoria cuadrática
+// t: parámetro de trayectoria, array de valores entre 0 y 1
+// r: función que devuelve el punto (x,y) para un t dado
+// dr: función que devuelve la derivada (dx,dy) respecto a t en cada t dado
+
+// ==============================
+// VARIABLES DE VISUALIZACIÓN.PY
+// ==============================
+
+// F_np: función campo vectorial en numpy
+// X, Y, XX, YY: mallas de coordenadas para visualización
+// Ux, Uy: componentes x e y del campo vectorial evaluadas sobre la malla
+// V: array con vectores del campo sobre la malla
+// P: array Nx2 con trayectoria a graficar
+// fig: figura de plotly
+// potential_fn: función potencial escalar dependiente de x,y
+// ZZ: valores del potencial en cada punto de la malla
+// title: string, título de la gráfica
+// name: string, etiqueta de la trayectoria en la leyenda
+
+// NOTA: Todas las otras variables declaradas dentro de funciones internas son locales y no forman parte del espacio global.
+

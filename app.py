@@ -28,159 +28,172 @@ F_np = campo["np"]
 
 # Editor de campos personalizados en el sidebar
 st.sidebar.subheader("➕ Crear un nuevo campo")
-
 nombre_nuevo = st.sidebar.text_input("Nombre del campo", "Campo personalizado")
+expr_P = st.sidebar.text_input("P(x,y) =", "2*x")
+expr_Q = st.sidebar.text_input("Q(x,y) =", "-y")
 
-expr_P = st.sidebar.text_input("P(x,y) =", "2*x")# Input para la expresión simbólica de P(x,y), componente x del campo
-
-expr_Q = st.sidebar.text_input("Q(x,y) =", "-y") # Input para la expresión simbólica de Q(x,y), componente y del campo
-
-# Botón para que el usuario confirme la creación del nuevo campo
+# Si se presiona el botón para añadir campo, intenta crear el campo personalizado
 if st.sidebar.button("Añadir campo"):
     try:
-        # Interpreta (parsea) de forma segura las expresiones de P y Q como expresiones de sympy,
-        # permitiendo solo variables x, y, e y pi en el entorno de sympify (evita inseguridades)
         P_expr = sp.sympify(expr_P, {"x": x, "y": y, "e": sp.E, "pi": sp.pi})
         Q_expr = sp.sympify(expr_Q, {"x": x, "y": y, "e": sp.E, "pi": sp.pi})
-
-        # Crea el nuevo campo utilizando la función de utilidades, incluyendo nombre descriptivo
-        # Ejemplo de nombre: "MiCampo: (2*x, -y)"
         nombre_creado, campo_creado = crear_campo(
             f"{nombre_nuevo}: ({expr_P}, {expr_Q})",
             P_expr,
             Q_expr
         )
-        FIELDS[nombre_creado] = campo_creado # Agrega el campo creado al diccionario global FIELDS para que esté disponible en el resto de la app
-        st.sidebar.success(f"Campo '{nombre_creado}' añadido ") # Mensaje de éxito para el usuario en el sidebar
-
+        FIELDS[nombre_creado] = campo_creado
+        st.sidebar.success(f"Campo '{nombre_creado}' añadido ")
     except Exception as e:
-        st.sidebar.error(f"Error al interpretar P y Q:\n{e}") # En caso de error de parsing o construcción, muestra mensaje de error amigable al usuario
+        st.sidebar.error(f"Error al interpretar P y Q:\n{e}")
 
-#--------Sección para ingresar/manipular los puntos A y B (extremos de las trayectorias)--------
-# (Esto permite al usuario definir el punto inicial y final para las curvas de integración)
-
-st.sidebar.markdown("---")   # Línea divisoria en el sidebar
-st.sidebar.write("**Puntos extremos** (A y B)")  # Título descriptivo en sidebar
-
-# Crea inputs numéricos para los valores x e y de los puntos A y B (con valores por defecto y step)
-Ax = st.sidebar.number_input("A_x", value=0.0, step=0.1)   # Componente x de A
-Ay = st.sidebar.number_input("A_y", value=0.0, step=0.1)   # Componente y de A
-Bx = st.sidebar.number_input("B_x", value=1.0, step=0.1)   # Componente x de B
-By = st.sidebar.number_input("B_y", value=1.0, step=0.1)   # Componente y de B
-
-# Construye los puntos A y B como arrays de numpy para usarlos en cálculos y trayectorias
+st.sidebar.markdown("---")
+st.sidebar.write("**Puntos extremos** (A y B)")
+Ax = st.sidebar.number_input("A_x", value=0.0, step=0.1)
+Ay = st.sidebar.number_input("A_y", value=0.0, step=0.1)
+Bx = st.sidebar.number_input("B_x", value=1.0, step=0.1)
+By = st.sidebar.number_input("B_y", value=1.0, step=0.1)
 A = np.array([Ax, Ay])
 B = np.array([Bx, By])
 
-# Sección para los parámetros de trayectoria 2
 st.sidebar.markdown("---")
+
 tray_sel = st.sidebar.selectbox(
     "Trayectoria 2",
-    ["Curva parabólica (t, t^2)",
-     "Familia cuadrática y=(1-a)t + a t^2"]
+    [
+        "Curva parabólica (t, t^2)",
+        "Familia cuadrática y=(1-a)t + a t^2"
+    ]
 )
-a = st.sidebar.slider("Parámetro a (solo familia)", -2.0, 2.0, 1.0, 0.1)
 
-# Parámetros numéricos de integración y visualización
+a = st.sidebar.slider("Parámetro a (solo familia)", -2.0, 2.0, 1.0, 0.1)
 res = st.sidebar.slider("Resolución integración (n)", 500, 6000, 2000, 100)
 dens = st.sidebar.slider("Densidad del campo (flechas)", 10, 30, 20, 1)
 
-# Opción para explorar el óptimo W(a)
 st.sidebar.markdown("---")
+
+search_min = False
 explorar_optimo = False
+
+# Si el campo no es conservativo y se selecciona la familia cuadrática,
+# se habilitan las opciones de exploración y búsqueda óptima
 if (not campo["conservativo"]) and tray_sel.startswith("Familia"):
-    explorar_optimo = st.sidebar.checkbox("Explorar W(a) en la familia", value=False)
+    col_opt1, col_opt2 = st.sidebar.columns(2)
+    explorar_optimo = col_opt1.checkbox("Explorar W(a)", value=False)
+    search_min = col_opt2.button("search")
 else:
     st.sidebar.caption(
+        # Solo tiene sentido explorar W(a) para campos no conservativos y la familia cuadrática
         "El barrido W(a) solo aplica para campos no conservativos y la familia cuadrática."
     )
 
 # -------------------------------------------------
 # CUERPO PRINCIPAL: información del campo, trabajos y gráficas
 # -------------------------------------------------
-
-# Expansor con detalles del campo seleccionado
 with st.expander("Detalles del campo"):
     st.write(f"**Campo seleccionado:** {campo_nombre}")
-    st.write(f"**Conservativo:** {campo['conservativo']}  |  **curl** = `{campo['curl']}`")
+    st.write(
+        f"**Conservativo:** {campo['conservativo']}  |  **curl** = `{campo['curl']}`"
+    )
     if campo["conservativo"]:
         if campo["potencial"] is not None:
             st.write("Tiene potencial escalar (se muestra más abajo).")
         else:
-            st.write("Es conservativo (curl = 0), pero no se pudo obtener el potencial automáticamente.")
+            st.write(
+                "Es conservativo (curl = 0), pero no se pudo obtener el potencial automáticamente."
+            )
 
-# Definición de las trayectorias según la selección del usuario
+# Generación de las trayectorias y sus derivadas según la selección
 r1, dr1 = trayectoria_recta(A, B), velocidad_recta(A, B)
 if tray_sel.startswith("Curva"):
     r2, dr2 = trayectoria_parabolica(A, B), velocidad_parabolica(A, B)
 else:
     r2, dr2 = trayectoria_parametrica(A, B, a), velocidad_parametrica(A, B, a)
 
-# Cálculo de los trabajos sobre ambas trayectorias
+# Cálculo de los trabajos en ambas trayectorias
 W1 = calcular_trabajo(F_np, r1, dr1, n=res)
 W2 = calcular_trabajo(F_np, r2, dr2, n=res)
 
-# Visualización rápida de valores de trabajo en columnas
+# Métricas mostradas al usuario sobre el trabajo en cada trayectoria
 col1, col2 = st.columns(2)
 with col1:
-    # Muestra un cuadro métrico con el resultado del trabajo calculado a lo largo de la trayectoria recta entre A y B
     st.metric("Trabajo en recta", f"{W1:.6f}")
 with col2:
-    # Muestra un cuadro métrico con el resultado del trabajo calculado a lo largo de la segunda trayectoria
     st.metric("Trabajo trayectoria 2", f"{W2:.6f}")
 
-# Generación de los puntos a graficar para ambas trayectorias
+# Preparación de datos para graficar las trayectorias, determinando límites del gráfico
 t_plot = np.linspace(0, 1, 500)
 P1 = r1(t_plot)
 P2 = r2(t_plot)
-
-# Ajuste automático de los límites de la gráfica según las trayectorias
-# Calcula los límites mínimos y máximos en x y en y, considerando ambas trayectorias (P1 y P2)
-x_min = min(P1[:, 0].min(), P2[:, 0].min())  # mínimo x entre ambas trayectorias
-x_max = max(P1[:, 0].max(), P2[:, 0].max())  # máximo x entre ambas trayectorias
-y_min = min(P1[:, 1].min(), P2[:, 1].min())  # mínimo y entre ambas trayectorias
-y_max = max(P1[:, 1].max(), P2[:, 1].max())  # máximo y entre ambas trayectorias
-
-# Calcula la diferencia (rango) en x y en y
+x_min = min(P1[:, 0].min(), P2[:, 0].min())
+x_max = max(P1[:, 0].max(), P2[:, 0].max())
+y_min = min(P1[:, 1].min(), P2[:, 1].min())
+y_max = max(P1[:, 1].max(), P2[:, 1].max())
 dx = x_max - x_min
 dy = y_max - y_min
-
-# Padding: si el rango es 0, usa 1.0; si no, usa 20% del rango
 pad_x = 0.2 * dx if dx > 0 else 1.0
 pad_y = 0.2 * dy if dy > 0 else 1.0
-
-# Define los límites finales con padding
 xlim = (x_min - pad_x, x_max + pad_x)
 ylim = (y_min - pad_y, y_max + pad_y)
 
-# Gráfico del campo vectorial junto a ambas trayectorias
+# === ÚNICA GRÁFICA: General o con Óptima incluida ===
 fig = quiver_2d(F_np, xlim=xlim, ylim=ylim, density=dens)
 fig = add_path(fig, P1, "Recta A→B")
 fig = add_path(fig, P2, "Trayectoria 2")
 
-st.plotly_chart(fig, use_container_width=True, key="campo_2d")
+# Búsqueda de parámetro óptimo a para familia cuadrática en campos no conservativos
+# Si se solicita buscar el mínimo y se cumple que la trayectoria es de la familia cuadrática
+# y el campo no es conservativo, se procede a buscar el parámetro óptimo 'a' que minimiza el trabajo.
+if search_min and tray_sel.startswith("Familia") and (not campo["conservativo"]):
+    # Genera 201 valores de 'a' entre -2 y 2 (barrido fino)
+    a_vals = np.linspace(-2.0, 2.0, 201)
+    W_vals = []  # Lista para ir guardando los trabajos calculados para cada 'a'
+    for av in a_vals:
+        # Para cada valor de 'a', genera la trayectoria y su velocidad asociada
+        rA, dA = trayectoria_parametrica(A, B, av), velocidad_parametrica(A, B, av)
+        # Calcula el trabajo realizado por el campo en dicha trayectoria
+        W_vals.append(calcular_trabajo(F_np, rA, dA, n=res))
+    W_vals = np.array(W_vals)  # Convierte la lista de trabajos a un array de numpy
+    idx_min = np.argmin(W_vals)  # Encuentra el índice del valor mínimo de trabajo
+    a_opt = a_vals[idx_min]      # El valor de 'a' óptimo corresponde al mínimo encontrado
+    W_opt = W_vals[idx_min]      # El trabajo mínimo correspondiente
+    # Muestra la información sobre la trayectoria óptima encontrada
+    st.info(
+        f"La trayectoria de mínimo trabajo tiene a = {a_opt:.4f} "
+        f"(Trabajo mínimo = {W_opt:.6f})"
+    )
+    # Traza la trayectoria óptima encontrada en la figura y la añade como "Óptima"
+    P_opt = trayectoria_parametrica(A, B, a_opt)(t_plot)
+    fig = add_path(fig, P_opt, f"Óptima a={a_opt:.3f}")
 
-# Si es un campo conservativo y existe potencial, grafica la superficie
+# Muestra el gráfico principal de Streamlit
+st.plotly_chart(fig, use_container_width=True)
+
+# Si el campo es conservativo y tiene potencial escalar, grafica el potencial 3D
 if campo["conservativo"] and campo["potencial"] is not None:
     st.subheader("Superficie del potencial (solo campos conservativos)")
     f3d = potencial_3d(campo["potencial"], title="f(x,y)")
     st.plotly_chart(f3d, use_container_width=True, key="potencial_3d")
 
-# Barrido del parámetro a en la familia de trayectorias, si corresponde
+# Si se selecciona explorar la variación de trabajo con a, grafica W(a)
+# Si la opción de explorar el óptimo está habilitada y la trayectoria seleccionada es de la familia cuadrática
 if explorar_optimo and tray_sel.startswith("Familia"):
-    st.subheader("Barrido del parámetro a")
-    a_vals = np.linspace(-2.0, 2.0, 81)
-    W_vals = []
+    st.subheader("Barrido del parámetro a")  # Título descriptivo en la app
+    a_vals = np.linspace(-2.0, 2.0, 81)  # Genera un rango de valores para el parámetro a
+    W_vals = []  # Aquí se almacenarán los trabajos calculados para cada a
+    # Para cada valor de a calcula la trayectoria y su derivada
     for av in a_vals:
         rA, dA = trayectoria_parametrica(A, B, av), velocidad_parametrica(A, B, av)
+        # Calcula el trabajo para esa trayectoria y lo guarda
         W_vals.append(calcular_trabajo(F_np, rA, dA, n=res))
+    # Grafica el trabajo en función de a en Streamlit usando Plotly
     st.plotly_chart(
         plot_W_vs_a(a_vals, W_vals),
         use_container_width=True,
         key="barrido_Wa"
     )
 
-# Mensaje informativo para el usuario sobre la naturaleza del trabajo en diferentes campos
+# Mensaje aclaratorio final sobre el significado del trabajo en campos conservativos vs no conservativos
 st.info(
     "Tip: en campos conservativos el trabajo solo depende de A y B; "
     "en campos no conservativos, depende de la forma de la trayectoria."
