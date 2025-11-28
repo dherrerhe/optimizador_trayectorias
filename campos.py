@@ -1,7 +1,9 @@
 import numpy as np
 import sympy as sp
 
+# Definición de símbolos simbólicos para x e y (real=True por default)
 x, y = sp.symbols('x y', real=True)
+
 
 def crear_campo(nombre, P_expr, Q_expr):
     """
@@ -9,46 +11,56 @@ def crear_campo(nombre, P_expr, Q_expr):
     Calcula, si es posible, el potencial para campos conservativos.
     Incluye validaciones numéricas y manejo seguro de errores.
     """
-    F_sym = (P_expr, Q_expr)
+    F_sym = (P_expr, Q_expr)  # Tupla simbólica para el campo
     curl = sp.simplify(curl_2d(F_sym))
-    es_conservativo = (curl == 0)
+    es_conservativo = (curl == 0)  # Chequea si el campo es conservativo
 
-    # Versión NumPy de P y Q
+    # Versiones NumPy de las funciones P(x, y) y Q(x, y)
     P_l = sp.lambdify((x, y), P_expr, "numpy")
     Q_l = sp.lambdify((x, y), Q_expr, "numpy")
 
     def F_np(xy: np.ndarray) -> np.ndarray:
+        # Función vectorizada que evalúa el campo en un array de puntos [N, 2]
         X = xy[..., 0]
         Y = xy[..., 1]
         return np.stack((P_l(X, Y), Q_l(X, Y)), axis=-1)
 
-    # Validación: probar evaluaciones
+    # Validación: intenta evaluar P y Q en el punto (0, 0)
     try:
         pv = P_l(0.0, 0.0)
         qv = Q_l(0.0, 0.0)
-        _ = float(pv) + float(qv)  # fuerza conversión a float/ndarray
+        _ = float(pv) + float(qv)  # Fuerza conversión a float/ndarray
     except Exception as e:
-        raise ValueError(f"Las funciones P o Q no se pueden evaluar numéricamente en (0,0): {e}")
+        raise ValueError(
+            f"Las funciones P o Q no se pueden evaluar numéricamente en (0,0): {e}"
+        )
 
     potencial_fn = None
     if es_conservativo:
+        # Si es conservativo, intenta calcular el potencial escalar
         try:
-            # Calcula el potencial de manera directa, sin simplify
+            # Calcula el potencial por integración simbólica de P respecto de x
             f_int_x = sp.integrate(P_expr, x)
+            # Calcula derivada parcial respecto de y para ajustar potencial
             df_dy = sp.diff(f_int_x, y)
+            # Resto para ajustar C(y) por posibles términos faltantes de Q
             resto = sp.simplify(Q_expr - df_dy)
+            # Integra el resto respecto de y
             C_y = sp.integrate(resto, y)
+            # Suma de ambas partes
             f_pot = f_int_x + C_y
-            # Solo simplifica si es MUY largo
+            # Si el potencial es muy complejo, simplifica la expresión
             if len(str(f_pot)) > 200:
                 f_pot = sp.simplify(f_pot)
+            # Compila función NumPy del potencial
             potencial_fn = sp.lambdify((x, y), f_pot, "numpy")
-            # Validación del potencial
+            # Chequea que la función potencial se pueda evaluar
             vpot = potencial_fn(0.0, 0.0)
             _ = float(vpot)
         except Exception as e:
             potencial_fn = None  # No hay potencial fiable/calculable
 
+    # Devuelve un tuple (nombre, diccionario de propiedades)
     return nombre, {
         "sym": F_sym,
         "np": F_np,
@@ -64,14 +76,21 @@ def curl_2d(PQ_sym) -> sp.Expr:
     como una tupla de expresiones simbólicas (P, Q).
     """
     P, Q = PQ_sym
+    # En R^2 el rotacional es ∂Q/∂x - ∂P/∂y
     return sp.diff(Q, x) - sp.diff(P, y)
 
-# Definimos los símbolos simbólicos para las variables x e y
+
+# Definimos nuevamente los símbolos por claridad (según PEP 8,
+# pero también pueden trasladarse a una única definición global).
 x, y = sp.symbols('x y', real=True)
 
-# Campo CONSERVATIVO F1 = ∇f, con f = x^2 + y^2
+# Campo CONSERVATIVO: F1 = ∇f, con f = x^2 + y^2
 f1 = x ** 2 + y ** 2  # Potencial escalar para el campo conservativo
-F1_sym = (sp.diff(f1, x), sp.diff(f1, y))  # Gradiente del potencial: (2x, 2y)
+F1_sym = (
+    sp.diff(f1, x),  # 2x
+    sp.diff(f1, y)   # 2y
+)  # El gradiente del potencial: (2x, 2y)
+
 
 def campo_conservativo(xy: np.ndarray) -> np.ndarray:
     """
@@ -80,10 +99,13 @@ def campo_conservativo(xy: np.ndarray) -> np.ndarray:
     """
     X = xy[..., 0]
     Y = xy[..., 1]
+    # Calcula (2x, 2y) para cada punto
     return np.stack((2 * X, 2 * Y), axis=-1)
 
-# Campo NO CONSERVATIVO F2 = (-y, x)
+
+# Campo NO CONSERVATIVO: F2 = (-y, x)
 F2_sym = (-y, x)  # Campo definido simbólicamente como una tupla (P, Q)
+
 
 def campo_rotacional(xy: np.ndarray) -> np.ndarray:
     """
@@ -93,21 +115,22 @@ def campo_rotacional(xy: np.ndarray) -> np.ndarray:
     Parámetros
     ----------
     xy : np.ndarray
-        Un arreglo de N puntos en R^2. Es decir, un array de forma (N, 2) donde 
-        cada fila representa un punto (x, y). np.ndarray (abreviatura de "NumPy array") 
-        es una estructura de datos fundamental de la librería NumPy que permite 
-        almacenar y operar eficientemente sobre datos numéricos en arreglos multidimensionales.
+        Un arreglo de N puntos en R^2 (array de shape (N, 2)).
+        Cada fila representa un punto (x, y).
 
     Retorna
     -------
     np.ndarray
-        Un array de forma (N, 2) con los valores del campo F2 en cada punto.
+        Un array de shape (N, 2) con los valores del campo F2 en cada punto.
     """
     X = xy[..., 0]
     Y = xy[..., 1]
+    # Devuelve el vector (-y, x) para cada punto del array de entrada
     return np.stack((-Y, X), axis=-1)
 
+
 # ----- Utilidades -----
+
 
 def potencial_f1(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
     """
@@ -116,12 +139,13 @@ def potencial_f1(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
     """
     return X ** 2 + Y ** 2
 
-# Rotacionales para los campos definidos anteriormente
-CURL_F1 = sp.simplify(curl_2d(F1_sym))   # = 0 para campo conservativo
-CURL_F2 = sp.simplify(curl_2d(F2_sym))   # = 2 para campo no conservativo
 
+# Rotacionales para los campos definidos anteriormente (simbolicamente)
+CURL_F1 = sp.simplify(curl_2d(F1_sym))  # = 0 para campo conservativo
+CURL_F2 = sp.simplify(curl_2d(F2_sym))  # = 2 para campo no conservativo
+
+# Diccionario con información sobre cada campo vectorial
 FIELDS = {
-    # Diccionario con información sobre cada campo vectorial
     "Conservativo: F1(x,y) = (2x, 2y)": {
         "sym": F1_sym,
         "np": campo_conservativo,

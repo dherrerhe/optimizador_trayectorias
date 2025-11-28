@@ -49,13 +49,15 @@ def add_path(fig, P, name="trayectoria"):
         # color por defecto si se usa otro nombre
         color = "red"
 
+    # Agrega a la figura la trayectoria especificada por los puntos P como una línea,
+    # usando un color y ancho de línea determinados según el nombre de la trayectoria.
     fig.add_trace(
         go.Scatter(
-            x=P[:, 0],
-            y=P[:, 1],
-            mode="lines",
-            name=name,
-            line=dict(color=color, width=3)
+            x=P[:, 0],      # Coordenada x de la trayectoria
+            y=P[:, 1],      # Coordenada y de la trayectoria
+            mode="lines",   # Dibuja solo la línea (no puntos)
+            name=name,      # Nombre para la leyenda
+            line=dict(color=color, width=3)  # Estilo de línea
         )
     )
     return fig
